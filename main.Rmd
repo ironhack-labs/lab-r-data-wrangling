@@ -1,0 +1,206 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# Lab \| Data Wrangling with R
+
+## Objective
+
+Practice data wrangling, cleaning, and manipulation techniques in R using the Sample Super Store dataset. By the end of this activity, you should be able to:
+
+-   Load and explore the dataset.
+
+-   Perform basic and advanced data manipulations.
+
+-   Handle missing data and duplicates.
+
+-   Aggregate and summarize data.
+
+-   Dataset Overview.
+
+The Sample Super Store dataset contains sales, profit, and customer information for a retail store. It includes columns such as:
+
+-   Order ID, Order Date, Ship Date
+
+-   Customer ID, Customer Name, Segment
+
+-   City, State, Region, Category, Sub-Category
+
+-   Sales, Quantity, Discount, Profit
+
+## Instructions
+
+### Step 1: Load and Explore the Dataset
+
+1.  Load the dataset into R.
+
+2.  Explore the dataset using str(), head(), and summary().
+
+3.  Identify the number of rows and columns.
+
+    ```{r}
+    superstore <- read.csv("Sample - Superstore.csv")
+    head(superstore)
+    str(superstore)
+    summary(superstore)
+
+    ```
+
+### Step 2: Basic Data Manipulation
+
+1.  Select the following columns: Order ID, Order Date, Customer Name, Sales, Profit.
+
+2.  Filter the dataset to show only orders with a profit greater than \$100.
+
+3.  Sort the dataset by Sales in descending order.
+
+    ```{r}
+    library(dplyr)
+    order_cust_sales <- superstore[c("Order.ID", "Order.Date", "Customer.Name", "Sales", "Profit")]
+    order_cust_sales <- filter(order_cust_sales, Profit > 1000)
+    order_cust_sales <- order_cust_sales %>% arrange(desc(Sales))
+    order_cust_sales
+    ```
+
+```{r}
+# second variant
+ord_cust_sl <- superstore[c("Order.ID", "Order.Date", "Customer.Name", "Sales", "Profit")]
+ord_cust_sl <- ord_cust_sl[ord_cust_sl$Profit > 1000, ]
+ord_cust_sl <- ord_cust_sl[order(ord_cust_sl$Sales, decreasing = TRUE), ]
+ord_cust_sl
+```
+
+### Step 3: Handle Missing Data
+
+1.  Check for missing values in the dataset.
+
+2.  Replace missing values in the Postal Code column with the mode (most frequent value).
+
+3.  Remove rows with missing values in the Customer Name column.
+
+    ```{r}
+    colSums(is.na(superstore))
+    ```
+
+### Step 4: Create and Modify Columns
+
+1.  Create a new column Profit_Margin as the ratio of Profit to Sales.
+
+2.  Create a new column Order_Year by extracting the year from Order Date.
+
+3.  Convert the Order.Date column to a Date data type.
+
+    ```{r}
+    superstore <- transform(superstore, Profit_Margin = Profit / Sales)
+    superstore$Order.Date <- as.Date(superstore$Order.Date, format = "%d/%m/%Y")
+    superstore$Year <- format(superstore$Order.Date, "%Y" )
+    superstore
+    ```
+
+### Step 5: Aggregating and Summarizing Data
+
+1.  Calculate the total sales and profit by Category.
+
+    ```{r}
+    library(dplyr)
+    category_sales <- superstore %>%
+      group_by(Category) %>%
+      summarise(
+        Total_Sales = sum(Sales, na.rm = TRUE),
+        Total_Profit = sum(Profit, na.rm = TRUE)
+      )
+
+    print(category_sales)
+    ```
+
+2.  Find the average profit margin by Region.
+
+    ```{r}
+    region_margin <- superstore %>%
+      group_by(Region) %>%
+      summarise(
+        Avg_profit = mean(Profit)
+      )
+    region_margin
+    ```
+
+3.  Count the number of orders by Customer Segment.
+
+    ```{r}
+    cust_segment <- superstore %>%
+      group_by(Segment) %>%
+      count(Segment, name = "number of Orderd")
+    cust_segment
+    ```
+
+## Optional
+
+### Extra 1: Advanced Challenges
+
+1.  Identify and remove duplicate rows based on Order ID.
+
+    ```{r}
+    duplicated_rows <- superstore[duplicated(superstore), ]
+    duplicated_rows
+    ```
+
+2.  Create a new column Discount_Level that categorizes discounts as "Low" (\<10%), "Medium" (10-20%), and "High" (\>20%).
+
+    ```{r}
+    superstore <- superstore %>%
+      mutate(Discount_Level = case_when(
+                          Discount >= 0  & Discount < 0.1 ~ "Low",
+                          Discount >= 0.1  & Discount <= 0.2 ~ "Medium",
+                          Discount > 0.2  & Discount <= 1 ~ "High",
+                          TRUE ~ NA_character_
+                        ))
+    ```
+
+3.  Merge the dataset with a new dataset containing regional population data (create a dummy dataset for this purpose).
+
+    ```{r}
+    # Create a dummy dataset to join
+    region_data <- data.frame(
+      Region = c("East", "West", "Central", "South"),
+      Population = c(5000000, 3000000, 4000000, 3500000)
+    )
+
+    superstore <- superstore %>%
+        left_join(region_data, by = "Region")
+    ```
+
+### Extra 2: Data Visualization
+
+Next class we will talk about data visualization, but let's see if you can pull it off on your own.
+
+1.  Create a bar plot of total sales by Category.
+
+    ```{r}
+    library(forcats)
+    library(ggplot2)
+    ggplot(category_sales, aes(x = Category, y = Total_Sales)) +
+      geom_bar(stat = "identity", fill = "skyblue", color = "black") +
+      labs(title = "Total Sales by Category", x = "Category", y = "Total Sales") +
+      theme_minimal()
+    ```
+
+2.  Create a scatter plot of Sales vs. Profit with a trend line.
+
+    ```{r}
+    ggplot(superstore, aes(x = Sales, y = Profit)) +
+      geom_point(color = "blue") +  # Точки
+      geom_smooth(method = "lm", se = FALSE, color = "red") +  # Линия тренда
+      labs(title = "Scatter Plot of Sales vs. Profit with Trend Line", 
+           x = "Sales", y = "Profit") +
+      theme_minimal()
+    ```
+
+3.  Create a histogram of Profit_Margin.
+
+    ```{r}
+    ggplot(superstore, aes(x = Profit.Margin)) +
+      geom_histogram(binwidth = 0.05, fill = "skyblue", color = "black") +
+      labs(title = "Histogram of Profit Margin", x = "Profit Margin", y = "Frequency") +
+      theme_minimal()
+    ```
