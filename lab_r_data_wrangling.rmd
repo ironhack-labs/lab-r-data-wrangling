@@ -1,0 +1,152 @@
+Step 1: Load and Explore the Dataset
+Load the dataset into R.
+```{r}
+library(tidyr)
+library(tidyverse)
+superstore <- read.csv("C:/Users/Martijn/Downloads/drive-download-20250311T104144Z-001/Sample - Superstore/Sample - Superstore.csv")
+
+```
+Explore the dataset using str(), head(), and summary().
+```{r}
+print(str(superstore))
+head(superstore)
+summary(superstore)
+```
+Identify the number of rows and columns.
+```{r}
+ncol(superstore)
+nrow(superstore)
+```
+
+
+Step 2: Basic Data Manipulation
+Select the following columns: Order ID, Order Date, Customer Name, Sales, Profit.
+```{r}
+superstore_filter <- superstore %>%
+  select(Order.ID, Order.Date, Customer.Name, Sales, Profit)
+superstore_filter
+```
+Filter the dataset to show only orders with a profit greater than $100.
+```{r}
+superstore_filter <- superstore_filter %>%
+  subset(superstore_filter$Profit > 100)
+superstore_filter$Profit
+```
+Sort the dataset by Sales in descending order.
+```{r}
+superstore_filter <- superstore_filter %>%
+  arrange(desc(Sales))
+superstore_filter
+```
+Step 3: Handle Missing Data
+Check for missing values in the dataset.
+```{r}
+sum(is.na(superstore))
+```
+Replace missing values in the Postal Code column with the mode (most frequent value).
+```{r}
+# Find the most frequent (mode) Postal.Code
+mode_postal_code <- superstore %>%
+  count(Postal.Code, sort = TRUE) %>%
+  filter(!is.na(Postal.Code)) %>%
+  slice(1) %>%
+  pull(Postal.Code)
+
+# Replace NA values with the most frequent Postal.Code
+superstore <- superstore %>%
+  mutate(Postal.Code = ifelse(is.na(Postal.Code), mode_postal_code, Postal.Code))
+```
+Remove rows with missing values in the Customer Name column.
+```{r}
+superstore <- superstore %>%
+  subset(!is.na(Customer.Name))
+```
+Step 4: Create and Modify Columns
+Create a new column Profit_Margin as the ratio of Profit to Sales.
+```{r}
+superstore <- superstore %>%
+  mutate(Profit_Margin = Profit / Sales)
+```
+Create a new column Order_Year by extracting the year from Order Date.
+```{r}
+superstore <- superstore %>%
+  mutate(Order_Year = str_extract(Order.Date,"\\d{4}"))
+```
+Convert the Order.Date column to a Date data type.
+```{r}
+superstore$Order.Date <- as.Date(superstore$Order.Date, format = "%m/%d/%Y")
+str(superstore)
+```
+Step 5: Aggregating and Summarizing Data
+Calculate the total sales and profit by Category.
+```{r}
+superstore_category <- superstore %>%
+  group_by(Category) %>%
+  summarize(Total.Sales =sum(Sales), Total.Profit = sum(Profit))
+superstore_category
+```
+Find the average profit margin by Region.
+```{r}
+superstore %>%
+  group_by(Region) %>%
+  summarise(Average.Profit = mean(Profit_Margin))
+
+```
+Count the number of orders by Customer Segment.
+```{r}
+superstore %>%
+  group_by(Segment) %>%
+  summarise(NumberOfOrders = n())
+```
+Optional
+Extra 1: Advanced Challenges
+Identify and remove duplicate rows based on Order ID.
+```{r}
+#superstore[duplicated(superstore$Order.ID), ]
+superstore <- superstore %>%
+  distinct(Order.ID, .keep_all = TRUE)
+```
+Create a new column Discount_Level that categorizes discounts as "Low" (<10%), "Medium" (10-20%), and "High" (>20%).
+```{r}
+superstore <- superstore %>%
+  mutate(Discount_Level = case_when(
+    Discount < 0.1 ~ "Low",
+    Discount > 0.1 & Discount < 0.2 ~ "Medium",
+    Discount > 0.2 ~ "High"
+    ))
+
+```
+Merge the dataset with a new dataset containing regional population data (create a dummy dataset for this purpose).
+```{r}
+df <- data.frame(
+  Region = c("Central", "East", "South", "West"),
+  Population = c(500000, 750000, 620000, 540000) # Example population numbers
+)
+
+superstore <- superstore %>%
+  left_join(df, by = join_by(Region))
+
+```
+Extra 2: Data Visualization
+Next class we will talk about data visualization, but let's see if you can pull it off on your own.
+Create a bar plot of total sales by Category.
+```{r}
+f <- ggplot(superstore,aes(x=Category, y=Sales))
+f 
++ geom_col(fill="skyblue", linetype=1) 
++ theme_classic() 
++ labs(title = "Sales by Category",
+       x = "Product Category",
+       y = "Total Sales")
+
+```
+Create a scatter plot of Sales vs. Profit with a trend line.
+```{r}
+s <- ggplot(superstore, aes(Sales, Profit))
+s + geom_point(shape=1) + geom_smooth(color="blue", method="lm")
+```
+Create a histogram of Profit_Margin.
+```{r}
+h <- ggplot(superstore, aes(Profit_Margin))
+h + geom_histogram(binwidth=0.1, fill="navyblue") + theme_classic() + labs(x = "Profit Margin", y="Count", title="Profit Margin Count")
+```
