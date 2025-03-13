@@ -1,0 +1,265 @@
+    
+# Lab | Data Wrangling with R
+
+## Objective
+
+Practice data wrangling, cleaning, and manipulation techniques in R using the Sample Super Store dataset. By the end of this activity, you should be able to:
+
+- Load and explore the dataset.
+- Perform basic and advanced data manipulations.
+- Handle missing data and duplicates.
+- Aggregate and summarize data.
+- Dataset Overview.
+
+The Sample Super Store dataset contains sales, profit, and customer information for a retail store. It includes columns such as:
+
+- Order ID, Order Date, Ship Date
+- Customer ID, Customer Name, Segment
+- City, State, Region, Category, Sub-Category
+- Sales, Quantity, Discount, Profit
+
+## Instructions
+
+### Step 1: Load and Explore the Dataset
+
+1. Load the dataset into R.
+```{r}
+super_store <- read.csv("dataset/Sample - Superstore.csv")
+```
+
+2. Explore the dataset using str(), head(), and summary().
+```{r}
+head(super_store)
+```
+```{r}
+summary(super_store)
+```
+
+
+```{r}
+str(super_store)
+
+```
+
+3. Identify the number of rows and columns.
+```{r}
+nrow(super_store)
+ncol(super_store)
+```
+```{r}
+colSums(is.na(super_store))
+```
+
+
+### Step 2: Basic Data Manipulation
+
+1. Select the following columns: Order ID, Order Date, Customer Name, Sales, Profit.
+```{r}
+library(dplyr)
+super_store1 <- super_store %>% select("Order.ID", "Order.Date", "Customer.Name", "Sales", "Profit")
+```
+
+2. Filter the dataset to show only orders with a profit greater than $100.
+```{r}
+filtered_profit <- super_store %>%
+  filter(Profit > 100)
+```
+
+3. Sort the dataset by Sales in descending order.
+```{r}
+sorted_by_sales <- super_store %>%
+  arrange(desc(Sales))
+```
+
+
+### Step 3: Handle Missing Data
+
+1. Check for missing values in the dataset.
+```{r}
+colSums(is.na(super_store))
+```
+
+2. Replace missing values in the Postal Code column with the mode (most frequent value).
+```{r}
+#Replace missing values with Mode
+library(DescTools)
+
+super_store <- super_store %>%
+  mutate(Postal.Code = ifelse(is.na(Postal.Code), Mode(Age, na.rm = TRUE), Postal.Code))
+```
+
+3. Remove rows with missing values in the Customer Name column.
+```{r}
+super_store <- super_store %>%
+  filter(!is.na(Customer.Name))
+```
+
+### Step 4: Create and Modify Columns
+
+1. Create a new column Profit_Margin as the ratio of Profit to Sales.
+```{r}
+super_store <- super_store %>%
+  mutate(Profit_Margin= Profit/Sales)
+
+head(super_store)
+```
+
+2. Create a new column Order_Year by extracting the year from Order Date.
+3. Convert the Order.Date column to a Date data type.
+```{r}
+library(lubridate)
+
+super_store <- super_store %>%
+  mutate(Order.Date = mdy(Order.Date),  # Convert to Date type 
+         Order_Year = year(Order.Date))  # Extract the year from Order.Date
+
+```
+
+
+```{r}
+head(super_store)
+```
+
+### Step 5: Aggregating and Summarizing Data
+
+1. Calculate the total sales and profit by Category.
+```{r}
+category_summary <- super_store %>%
+  group_by(Category) %>%
+  summarise(
+    Total_Sales=sum(Sales),
+    Total_Profit=sum(Profit)
+  )
+print(category_summary)
+```
+
+2. Find the average profit margin by Region.
+```{r}
+average_profit_margin <- super_store %>%
+  group_by(Region) %>%
+  summarise(
+    Average_Profit_Margin= Mean(Profit_Margin)
+    )
+
+print(average_profit_margin)
+  
+```
+
+3. Count the number of orders by Customer Segment.
+```{r}
+number_orders_by_segment <- super_store %>%
+  group_by(Segment) %>%
+  summarise(Order_count= n())
+
+print(number_orders_by_segment)
+```
+
+
+## Optional
+
+### Extra 1: Advanced Challenges
+
+1. Identify and remove duplicate rows based on Order ID.
+```{r}
+#Checking for duplicate rows
+duplicated_rows <- super_store[duplicated(super_store$Order.ID), ]
+
+nrow(duplicated_rows)
+```
+
+2. Create a new column Discount_Level that categorizes discounts as "Low" (<10%), "Medium" (10-20%), and "High" (>20%).
+```{r}
+#Removing duplicate rows
+super_store_unique <- super_store %>%
+  distinct(Order.ID, .Keep_all= TRUE)
+nrow(super_store_unique)
+```
+
+3. Merge the dataset with a new dataset containing regional population data (create a dummy dataset for this purpose).
+```{r}
+# Check unique regions in super_store
+unique(super_store$Region)
+
+
+```
+
+```{r}
+# Create a dummy dataset to join
+population_data <- data.frame(
+  Region = c("South","West","Central","East"),
+  Population = c(1000000, 1500000, 2000000, 2500000)
+)
+
+print(population_data)
+```
+
+```{r}
+# Join with the Super_Store dataset
+super_store <- super_store %>%
+  left_join(population_data, by = "Region")
+
+# View the updated dataset
+head(super_store)
+```
+
+
+### Extra 2: Data Visualization
+
+Next class we will talk about data visualization, but let's see if you can pull it off on your own.
+
+1. Create a bar plot of total sales by Category.
+```{r}
+#Total sales by category
+sales_by_category <- super_store %>%
+  group_by(Category) %>%
+  summarise(
+    Total_Sales= sum(Sales)
+  )
+head(sales_by_category)
+```
+```{r}
+#Bar plot
+library(ggplot2)
+library(scales)
+
+ggplot(sales_by_category, aes(x = Category, y = Total_Sales, fill = Category)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Total Sales by Category",
+       x = "Category",
+       y = "Total Sales") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(hjust = 0.5)) +  
+  scale_y_continuous(labels = comma)
+
+```
+
+2. Create a scatter plot of Sales vs. Profit with a trend line.
+```{r}
+ggplot(super_store, aes(x = Sales, y = Profit)) +
+  geom_point(color = "blue", size = 2) +
+  geom_smooth(method = "lm", color = "red", se = TRUE) +
+  labs(title = "Scatter Plot of Sales vs. Profit with Trend Line",
+       x = "Sales",
+       y = "Profit") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+  
+```
+
+3. Create a histogram of Profit_Margin.
+```{r}
+#Histogram of Profit Margin
+
+ggplot(data = super_store, aes(x = Profit_Margin)) +
+  geom_histogram(binwidth = 0.05, fill = "steelblue", color = "black") +
+  labs(title = "Distribution of Profit Margin",
+       x = "Profit Margin",
+       y = "Frequency") +
+  theme_minimal()+
+  theme(plot.title = element_text(hjust = 0.5))
+        
+```
+
+
+
