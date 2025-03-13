@@ -1,0 +1,303 @@
+---
+title: "Data Wrangling with R"
+output: html_notebook
+editor_options: 
+  chunk_output_type: inline
+---
+
+![](https://user-images.githubusercontent.com/23629340/40541063-a07a0a8a-601a-11e8-91b5-2f13e4e6b441.png)
+
+# Lab \| Data Wrangling with R
+
+## Objective
+
+Practice data wrangling, cleaning, and manipulation techniques in R using the **Sample Super Store** dataset. By the end of this activity, you should be able to:
+
+-   Load and explore the dataset.
+-   Perform basic and advanced data manipulations.
+-   Handle missing data and duplicates.
+-   Aggregate and summarize data.
+-   Dataset Overview.
+
+The Sample Super Store dataset contains sales, profit, and customer information for a retail store. It includes columns such as:
+
+-   Order ID, Order Date, Ship Date
+-   Customer ID, Customer Name, Segment
+-   City, State, Region, Category, Sub-Category
+-   Sales, Quantity, Discount, Profit
+
+## Instructions
+
+### Step 1: Load and Explore the Dataset
+
+1.  Load the dataset into R.
+
+```{r}
+library(readr)
+
+# Loading the Dataset
+df <- read.csv("/Users/guillermo/Documents/Ironhack/Datasets/Sample - Superstore/Sample - Superstore.csv")
+```
+
+
+```{r}
+library(dplyr)
+```
+
+1.  Explore the dataset using str(), head(), and summary().
+
+```{r}
+str(df)
+head(df)
+```
+
+```{r}
+summary(df)
+```
+
+1.  Identify the number of rows and columns.
+
+```{r}
+nrow(df)
+ncol(df)
+dim(df)
+```
+
+```{r}
+
+number_of_rows <- nrow(df)
+number_of_columns <- ncol(df)
+
+# Print the number of rows and columns
+print(paste("Number of rows:", number_of_rows))
+print(paste("Number of columns:", number_of_columns))
+names(df)
+```
+
+```{r}
+# Assuming your data frame is named 'df'
+column_names <- names(df)
+
+# Print the column names
+print(column_names)
+```
+
+### Step 2: Basic Data Manipulation
+
+1.  Select the following columns: Order ID, Order Date, Customer Name, Sales, Profit.
+
+```{r}
+store_subset_sales <- select(df, Order.ID, Order.Date, Customer.Name, Sales, Profit)
+```
+
+1.  Filter the dataset to show only orders with a profit greater than \$100.
+
+```{r}
+profit_from_100 <- filter(df, Profit > 100)
+```
+
+1.  Sort the dataset by Sales in descending order.
+
+```{r}
+df_sorted <- arrange(df, desc(Sales))
+```
+
+### Step 3: Handle Missing Data
+
+1.  Check for missing values in the dataset.
+
+```{r}
+# Set the first row of the 'Postal.Code' column to NA
+df$Postal.Code[1] <- NA
+df$Customer.Name[1] <- NA
+```
+
+```{r}
+missing_values_per_column <- colSums(is.na(df))
+any(is.na(df)) # Use this if you only need to know if there are any missing values in the entire dataset.
+
+print(missing_values_per_column)
+```
+
+1.  Replace missing values in the Postal Code column with the mode (most frequent value).
+
+```{r}
+calculate_mode <- function(x) {
+  unique_x <- unique(x)
+  unique_x[which.max(tabulate(match(x, unique_x)))]
+}
+
+#df <- df %>% mutate(Postal.Code = ifelse(is.na(Postal.Code), mode(Postal.Code), Postal.Code))
+df <- df %>%
+  mutate(Postal.Code = ifelse(is.na(Postal.Code), calculate_mode(na.omit(Postal.Code)), Postal.Code))
+
+```
+
+1.  Remove rows with missing values in the Customer Name column.
+
+```{r}
+clean_df <- df %>%
+  filter(!is.na(Customer.Name))
+
+```
+
+### Step 4: Create and Modify Columns
+
+1.  Create a new column Profit_Margin as the ratio of Profit to Sales.
+
+```{r}
+
+df$Profit_Margin <- df$Profit / df$Sales
+```
+
+1.  Create a new column Order_Year by extracting the year from Order Date.
+
+```{r}
+# Load stringr and forcats
+library(stringr)
+library(forcats)
+# Extract the year from Order Date.
+df <- df %>% 
+  mutate(Order_Year = str_extract(Order.Date, "\\d{4}$"))
+
+
+```
+
+1.  Convert the Order.Date column to a Date data type.
+
+```{r}
+df$Order.Date <- as.Date(df$Order.Date, format = "%m/%d/%Y")
+
+
+```
+
+### Step 5: Aggregating and Summarizing Data
+
+1.  Calculate the total sales and profit by Category.
+
+```{r}
+
+category_summary <- df %>% group_by(Category) %>%
+              summarize(
+                Total_Sales = sum(Sales, na.rm = TRUE),
+                Total_Profit = sum(Profit, na.rm = TRUE)
+              )
+```
+
+1.  Find the average profit margin by Region.
+
+```{r}
+profit_margen_region <- df %>% group_by(Region) %>%
+              summarize(
+                Total_Sales = mean(Profit_Margin, na.rm = TRUE)
+              )
+```
+
+1.  Count the number of orders by Customer Segment.
+
+```{r}
+
+orders_by_segment <- df %>%
+  group_by(Segment) %>%
+  summarize(Order_Count = n())
+
+```
+
+## Optional
+
+### Extra 1: Advanced Challenges
+
+1.  Identify and remove duplicate rows based on Order ID.
+
+2.  Create a new column Discount_Level that categorizes discounts as "Low" (\<10%), "Medium" (10-20%), and "High" (\>20%).
+
+```{r}
+
+# Remove duplicate rows based on Order ID
+orders_df_no_duplicates <- df %>%
+  distinct(Order.ID, .keep_all = TRUE)
+
+
+
+df2 <- df %>%
+  mutate(Discount_Level = case_when(
+    Discount < 0.1 ~ "Low",
+    Discount >= 0.1 & Discount < 0.2 ~ "Medium",
+    Discount >= 0.2 ~ "High",
+  ))
+
+```
+
+1.  Merge the dataset with a new dataset containing regional population data (create a dummy dataset for this purpose).
+
+```{r}
+# Create a dummy population dataset
+population_data <- data.frame(
+  Region = c("East", "West","Central", "South", "North"),
+  Population = c(1500000, 2000000, 500000, 1200000, 1800000)  # Example population values
+)
+```
+
+```{r}
+unique(df$Region)
+```
+
+```{r}
+# Merge the datasets based on the Region column
+merged_data <- merge(df, population_data, by = "Region")
+
+```
+
+### Extra 2: Data Visualization
+
+Next class we will talk about data visualization, but let's see if you can pull it off on your own.
+
+1.  Create a bar plot of total sales by Category.
+```{r}
+category_total_sales <- df %>%
+  group_by(Category) %>%
+    summarise(Total_Sales = sum(Sales))
+
+ggplot(category_total_sales, aes(x = Category, y = Total_Sales)) +
+  geom_bar(stat = "identity", fill = "skyblue") +  # Use "identity" to plot actual values
+  labs(title = "Total Sales by Category", 
+       x = "Category", 
+       y = "Total Sales") +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels for readability
+
+
+```
+
+
+
+2.  Create a scatter plot of Sales vs. Profit with a trend line.
+```{r}
+# Create a scatter plot of Sales vs. Profit with a trend line
+ggplot(df, aes(x = Sales, y = Profit)) +
+  geom_point(color = "blue", alpha = 0.6) +  # Scatter plot points
+  geom_smooth(method = "lm", color = "red", se = TRUE) +  # Add a linear trend line
+  labs(title = "Scatter Plot of Sales vs. Profit", 
+       x = "Sales", 
+       y = "Profit") +
+  theme_minimal()
+
+
+```
+
+3.  Create a histogram of Profit_Margin.
+```{r}
+# Check the range of the Profit_Margin column
+range(df$Profit_Margin, na.rm = TRUE)
+
+```
+
+```{r}
+library(ggplot2)
+
+ggplot(df, aes(x = Profit_Margin*100)) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "black") +
+  labs(title = "Profit Margin", x = "Profit Margin", y = "Count")
+
+```
+
+
