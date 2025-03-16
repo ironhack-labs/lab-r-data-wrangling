@@ -1,0 +1,85 @@
+# Lab \| Data Wrangling with R
+
+### Step 1: Load and Explore the Dataset
+
+```{r}
+library(dplyr)
+superstore <- read.csv("Sample - Superstore.csv")
+str(superstore)
+head(superstore)
+summary(superstore)
+```
+
+------------------------------------------------------------------------
+
+### Step 2: Basic Data Manipulation
+
+```{r}
+subset_data <- subset(superstore, select = c(Order.ID, Order.Date, Customer.Name, Sales, Profit))
+subset_data %>%
+  filter(Profit > 100) %>%
+  arrange(desc(Sales))
+```
+
+------------------------------------------------------------------------
+
+### Step 3: Handle Missing Data
+
+There is literally no missing data...
+
+```{r}
+any(is.na(superstore))
+```
+
+------------------------------------------------------------------------
+
+### Step 4: Create and Modify Columns
+
+```{r}
+library(lubridate)
+library(stringr)
+
+superstore <- superstore %>%
+  mutate(
+    Order.Date = case_when(
+      str_detect(Order.Date, "/") ~ as.Date(parse_date_time(Order.Date, orders = c("mdy", "dmy"))),
+      TRUE ~ as.Date(Order.Date)
+    )
+  )
+superstore$"Profit Margin" <- (superstore$Profit / superstore$Sales) * 100
+superstore$Order_Year <- format(superstore$Order.Date, "%Y")
+```
+
+------------------------------------------------------------------------
+
+### Step 5: Aggregating and Summarizing Data
+
+Sales & Profit by Category
+
+```{r}
+sales_profit_by_category <- superstore %>%
+  group_by(Category) %>%
+  summarise(
+    Total_Sales = sum(Sales, na.rm = TRUE),
+    Total_Profit = sum(Profit, na.rm = TRUE)
+  )
+print(sales_profit_by_category)
+```
+
+Average Profit Margin by Region
+
+```{r}
+avg_profit_margin_by_region <- superstore %>%
+  group_by(Region) %>%
+  summarise(Average_Profit_Margin = mean(`Profit Margin`, na.rm = TRUE))
+print(avg_profit_margin_by_region)
+```
+
+Number of Orders by Customer Segment
+
+```{r}
+orders_by_segment <- superstore %>%
+  group_by(Segment) %>%
+  summarise(Order_Count = n())
+print(orders_by_segment)
+```
