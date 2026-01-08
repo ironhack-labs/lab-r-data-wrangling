@@ -1,0 +1,158 @@
+---
+title: "lab_data_wranglingInR_completed_steps"
+output: html_document
+date: "2026-01-08"
+---
+
+# Lab | Data Wrangling with R
+
+## Objective
+
+Practice data wrangling, cleaning, and manipulation techniques in R using the Sample Super Store dataset. By the end of this activity, you should be able to:
+
+- Load and explore the dataset.
+- Perform basic and advanced data manipulations.
+- Handle missing data and duplicates.
+- Aggregate and summarize data.
+- Dataset Overview.
+
+The Sample Super Store dataset contains sales, profit, and customer information for a retail store. It includes columns such as:
+
+- Order ID, Order Date, Ship Date
+- Customer ID, Customer Name, Segment
+- City, State, Region, Category, Sub-Category
+- Sales, Quantity, Discount, Profit
+
+## Instructions
+
+### Step 1: Load and Explore the Dataset
+
+1. Load the dataset into R.
+2. Explore the dataset using str(), head(), and summary().
+3. Identify the number of rows and columns.
+
+```{r}
+
+# Load the dataset into R
+sprstr <- Sample_Superstore
+
+# Explore the dataset using str(), head(), and summary()
+str(sprstr)
+head(sprstr)
+summary(sprstr)
+
+# Identify the number of rows and columns
+dim(sprstr)
+``` 
+
+### Step 2: Basic Data Manipulation
+
+1. Select the following columns: Order ID, Order Date, Customer Name, Sales, Profit.
+2. Filter the dataset to show only orders with a profit greater than $100.
+3. Sort the dataset by Sales in descending order.
+
+```{r}
+# Select the following columns: Order ID, Order Date, Customer Name, Sales, Profit
+sprstr[c("Order ID", "Order Date", "Customer Name", "Sales", "Profit")]
+
+# Filter the dataset to show only orders with a profit greater than $100
+sprstr[sprstr$Profit > 100, ]
+
+# Sort the dataset by Sales in descending order
+arrange(sprstr, desc('Sales'))
+```
+
+### Step 3: Handle Missing Data
+
+1. Check for missing values in the dataset.
+2. Replace missing values in the Postal Code column with the mode (most frequent value).
+3. Remove rows with missing values in the Customer Name column.
+
+```{r}
+# Check for missing values in the dataset
+is.na(sprstr)
+
+# Replace missing values in the Postal Code column with the mode (most frequent value)
+# AI Solution - määäähh
+# library(dplyr)
+# dplyr mode
+# mode %>% 
+#   count(column_name) %>% 
+#   slice_max(n, n = 1)
+
+# on our own
+grouped_plz <- sprstr %>% group_by(`Postal Code`) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count))
+grouped_plz  
+
+# Ramis way
+sprstr <- sprstr %>%
+  mutate(`Postal Code` = ifelse(is.na(`Postal Code`), grouped_plz$`Postal Code`[1], `Postal Code`))
+
+grouped_plz$`Postal Code`[1]
+
+# Remove rows with missing values in the Customer Name column
+# df <- subset(df, Age >= 18)
+customer_empty <- subset(sprstr, is.na('Customer Name'))
+
+```
+
+### Step 4: Create and Modify Columns
+
+1. Create a new column Profit_Margin as the ratio of Profit to Sales.
+2. Create a new column Order_Year by extracting the year from Order Date.
+3. Convert the Order.Date column to a Date data type.
+
+```{r}
+# Create a new column Profit_Margin as the ratio of Profit to Sales
+sprstr <- sprstr %>%
+  mutate('Profit Margin' = Profit / Sales)
+View(sprstr)
+
+# Create a new column Order_Year by extracting the year from Order Date
+??str_extract
+library(stringr)
+library(forcats)
+sprstr <- sprstr %>% 
+  mutate('Order Year' = str_extract(`Order Date`, "\\d{4}"))
+
+# Convert the Order.Date column to a Date data type
+sprstr <- sprstr %>%
+  mutate('Order Date' = as.Date('Order Date', format = "%m/%d/%y"))
+
+```
+
+### Step 5: Aggregating and Summarizing Data
+
+1. Calculate the total sales and profit by Category.
+2. Find the average profit margin by Region.
+3. Count the number of orders by Customer Segment.
+
+```{r}
+
+# survival_summary <- titanic %>%
+#   group_by(class_label, sex) %>%
+#   summarize(survival_rate = mean(survived == "Yes", na.rm = TRUE))
+
+sales_and_profit_by_category <- sprstr %>%
+  group_by(Category) %>%
+  summarise(sum_sales = sum(Sales),
+  sum_profit = sum(Profit))
+
+sales_and_profit_by_category
+
+# Find the average profit margin by Region
+avg_profit_margin_region <- sprstr %>%
+  group_by(Region) %>%
+  summarize(avg_profit_margin = mean(`Profit Margin`))
+
+avg_profit_margin_region
+
+# Count the number of orders by Customer Segment
+number_of_orders_by_cs <- sprstr %>%
+  group_by(Segment) %>%
+  summarize(no_of_orders = count(`Order ID`))
+
+number_of_orders_by_cs
+```
